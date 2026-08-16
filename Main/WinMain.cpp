@@ -2,7 +2,7 @@
 // Hikali 渲染器入口：接收启动器（Launcher）写入的 RendererConfig 初始化参数
 //
 // 启动器流程：写 renderer_config.json → CreateProcess 传 "--config <路径>"
-// 本文件流程：解析命令行 → 读取 JSON → 校验并规格化参数 → 交给后端初始化
+// 本文件流程：解析命令行 → 读取 JSON → 校验并规格化参数 → 建窗口 → 消息循环
 //
 // 注意：
 //   - 命令行统一从 GetCommandLineW 取，不用 WinMain 的 lpCmdLine：
@@ -279,6 +279,111 @@ std::wstring DescribeConfig(const RendererConfig& config)
                   config.debugLayers ? L"开" : L"关");
 }
 
+// ---------- 窗口 ----------
+// 后端尚未接入，窗口内容先用 GDI 画出生效参数，
+// 这样启动器点下去能立刻看到参数确实传到了渲染器
+std::wstring g_windowInfoText;
+
+LRESULT CALLBACK RendererWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE)         // 全屏是无边框窗口，没有关闭按钮，留 Esc 退出
+        {
+            DestroyWindow(hWnd);
+            return 0;
+        }
+        break;
+
+    case WM_ERASEBKGND:
+        return 1;                        // 背景在 WM_PAINT 里一次画完，避免闪烁
+
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        const HDC   hdc = BeginPaint(hWnd, &ps);
+
+        RECT client{};
+        GetClientRect(hWnd, &client);
+
+        const HBRUSH background = CreateSolidBrush(RGB(16, 16, 20));
+        FillRect(hdc, &client, background);
+        DeleteObject(background);
+
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(225, 225, 232));
+        const HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);   // 系统 UI 字体，含中文字形
+        const HGDIOBJ oldFont = SelectObject(hdc, font);
+
+        // 先量高度，再垂直居中
+        RECT text = client;
+        DrawTextW(hdc, g_windowInfoText.c_str(), -1, &text, DT_CENTER | DT_CALCRECT);
+        const LONG height = text.bottom - text.top;
+        RECT drawAt = client;
+        drawAt.top = (client.bottom - client.top - height) / 2;
+        DrawTextW(hdc, g_windowInfoText.c_str(), -1, &drawAt, DT_CENTER);
+
+        SelectObject(hdc, oldFont);
+        EndPaint(hWnd, &ps);
+        return 0;
+    }
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+
+    default:
+        break;
+    }
+    return DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+// 按 config 建窗口。fullScreen 走无边框全屏（覆盖主显示器）：
+// 独占全屏要等交换链就绪，此处先用无边框，行为上等价且不会丢失显示模式
+HWND CreateRendererWindow(HINSTANCE hInstance, const RendererConfig& config)
+{
+    WNDCLASSEXW wc{};
+    wc.cbSize        = sizeof(wc);
+    wc.style         = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc   = RendererWndProc;
+    wc.hInstance     = hInstance;
+    wc.hCursor       = LoadCursorW(nullptr, (LPCWSTR)IDC_ARROW);   // IDC_ARROW 是 ANSI 资源宏，需转宽
+    wc.lpszClassName = L"HikaliRendererClass";
+    if (RegisterClassExW(&wc) == 0)
+        return nullptr;
+
+    const std::wstring title = Format(L"Hikali 渲染器 — %ls — %d x %d",
+                                      BackendName(config.backend),
+                                      (int)config.windowWidth, (int)config.windowHeight);
+
+    if (config.fullScreen)
+        return CreateWindowExW(0, wc.lpszClassName, title.c_str(), WS_POPUP,
+                               0, 0,
+                               GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
+                               nullptr, nullptr, hInstance, nullptr);
+
+    // 窗口模式：config 给的是客户区尺寸，换算成含边框的整体尺寸
+    RECT rect{ 0, 0, (LONG)config.windowWidth, (LONG)config.windowHeight };
+    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+
+    return CreateWindowExW(0, wc.lpszClassName, title.c_str(), WS_OVERLAPPEDWINDOW,
+                           CW_USEDEFAULT, CW_USEDEFAULT,
+                           rect.right - rect.left, rect.bottom - rect.top,
+                           nullptr, nullptr, hInstance, nullptr);
+}
+
+int RunMessageLoop()
+{
+    MSG msg{};
+    while (GetMessageW(&msg, nullptr, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    return (int)msg.wParam;
+}
+
 }   // namespace
 
 // ---------- 主入口 ----------
@@ -342,8 +447,36 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In
         return 3;
     }
 
-    // TODO: 用 config 创建窗口与 config.backend 对应的设备，进入渲染主循环
-    (void)hInstance;
+    // ---------- 按参数建窗口并运行 ----------
+    // 声明进程 DPI 感知，否则高分屏下系统会缩放，config 给的像素尺寸拿不准。
+    // 失败不致命（多为清单已声明过），但要记下来，免得尺寸对不上时无从排查
+    if (!SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))
+        LogLine(Format(L"[提示] 设置 DPI 感知失败（错误码 %lu），窗口尺寸可能被系统缩放。",
+                       GetLastError()));
 
-    return 0;
+    g_windowInfoText = DescribeConfig(config) +
+                       L"\n\n（图形后端尚未接入，当前仅验证启动参数）\n按 Esc 或关闭窗口退出";
+
+    const HWND hwnd = CreateRendererWindow(hInstance, config);
+    if (hwnd == nullptr)
+    {
+        ReportFatal(Format(L"创建窗口失败（错误码 %lu）。", GetLastError()));
+        return 4;
+    }
+
+    ShowWindow(hwnd, SW_SHOW);
+    UpdateWindow(hwnd);
+
+    // 从进程内部量客户区（不受调用方 DPI 虚拟化影响），确认参数确实落到了窗口上
+    RECT client{};
+    GetClientRect(hwnd, &client);
+    LogLine(Format(L"渲染器窗口已创建：客户区 %ld x %ld（DPI %u），进入消息循环。",
+                   client.right - client.left, client.bottom - client.top,
+                   GetDpiForWindow(hwnd)));
+
+    // TODO: 在此用 config.backend 创建设备与交换链（vsync / debugLayers 在设备初始化时生效），
+    //       并把 GetMessage 换成 PeekMessage 驱动的渲染循环
+    const int exitCode = RunMessageLoop();
+    LogLine(L"渲染器已退出。");
+    return exitCode;
 }
