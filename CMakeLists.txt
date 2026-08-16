@@ -267,7 +267,7 @@ include(BuildTools/CMake/BuildUtils.cmake)
 install_combined_static_lib(
     "${CMAKE_STATIC_LIBRARY_PREFIX}RendererCore${CMAKE_STATIC_LIBRARY_SUFFIX}"
     "${HIKALI_RENDERER_INSTALL_LIBS_LIST}"
-    RendererCore-static                 # Custom target name
-    Renderer                            # Folder
-    "${CMAKE_INSTALL_LIBDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>"    # Install destination
+    RendererCore-static                 # 自定义目标名
+    Renderer                            # 文件夹
+    "${CMAKE_INSTALL_LIBDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>"    # 安装位置
 )

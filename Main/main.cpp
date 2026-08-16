@@ -1,6 +1,11 @@
-#include <windows.h>
+#include <Windows.h>
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
+int WINAPI WinMain(_In_ HINSTANCE     hInstance,
+                   _In_opt_ HINSTANCE hPrevInstance,
+                   _In_ LPSTR         lpCmdLine,
+                   _In_ int           nShowCmd);
+
+int main(int argc, char* argv[])
 {
-    return 0;
+    return WinMain(GetModuleHandle(nullptr), nullptr, GetCommandLineA(), SW_SHOWDEFAULT);
 }

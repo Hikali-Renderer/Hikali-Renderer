@@ -68,3 +68,10 @@ function(install_combined_static_lib COMBINED_LIB_NAME LIBS_LIST CUSTOM_TARGET_N
     endif()
 
 endfunction()
+
+# Returns path to the target relative to CMake root
+function(get_target_relative_dir _TARGET _DIR)
+    get_target_property(TARGET_SOURCE_DIR ${_TARGET} SOURCE_DIR)
+    file(RELATIVE_PATH TARGET_RELATIVE_PATH "${CMAKE_SOURCE_DIR}" "${TARGET_SOURCE_DIR}")
+    set(${_DIR} ${TARGET_RELATIVE_PATH} PARENT_SCOPE)
+endfunction()

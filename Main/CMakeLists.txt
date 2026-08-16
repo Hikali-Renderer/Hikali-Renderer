@@ -3,7 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 project(Main CXX)
 
 if(PLATFORM_WIN32)
-    set(SOURCE main.cpp)
+    if(HIKALI_BUILD_WIN32_GUI_AS_CONSOLE)
+        set(SOURCE main.cpp)
+    else()
+        set(SOURCE WinMain.cpp)
+    endif()
 
     add_executable(Main ${SOURCE})
     if(NOT HIKALI_BUILD_WIN32_GUI_AS_CONSOLE)
