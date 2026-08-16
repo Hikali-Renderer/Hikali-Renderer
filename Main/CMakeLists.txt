@@ -22,6 +22,9 @@ if(PLATFORM_WIN32)
     target_include_directories(Main PRIVATE ../../Config)
     target_link_libraries(Main PRIVATE RendererConfig)
     target_link_libraries(Main PRIVATE BuildSettings)
+    # user32：MessageBoxW（GUI 子系统下无控制台时报错用）
+    # shell32：CommandLineToArgvW（解析 --config 参数）
+    target_link_libraries(Main PRIVATE user32 shell32)
 else()
     message(FATAL_ERROR "Unsupported platform!")
 endif()
