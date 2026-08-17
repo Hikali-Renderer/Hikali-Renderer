@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "Config.h"
+#include "NativeAppBase.hpp"
 
 // 正常由 BuildSettings 传入（$<BOOL:...> 展开为 0/1），此处兜底以便单文件编译
 #if !defined(D3D12_SUPPORTED)
@@ -386,6 +386,10 @@ int RunMessageLoop()
 
 }   // namespace
 
+// -------- 渲染器App --------
+using namespace Hikali;
+std::unique_ptr<NativeAppBase> g_mainApp;
+
 // ---------- 主入口 ----------
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
@@ -473,6 +477,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In
     LogLine(Format(L"渲染器窗口已创建：客户区 %ld x %ld（DPI %u），进入消息循环。",
                    client.right - client.left, client.bottom - client.top,
                    GetDpiForWindow(hwnd)));
+    if (!g_mainApp->OnWindowCreated(hwnd, config.windowWidth, config.windowHeight))
+    {
+        ReportFatal(Format(L"渲染器初始化失败（错误码 %lu）。", GetLastError()));
+        return -1;
+    }
 
     // TODO: 在此用 config.backend 创建设备与交换链（vsync / debugLayers 在设备初始化时生效），
     //       并把 GetMessage 换成 PeekMessage 驱动的渲染循环

@@ -75,3 +75,75 @@ function(get_target_relative_dir _TARGET _DIR)
     file(RELATIVE_PATH TARGET_RELATIVE_PATH "${CMAKE_SOURCE_DIR}" "${TARGET_SOURCE_DIR}")
     set(${_DIR} ${TARGET_RELATIVE_PATH} PARENT_SCOPE)
 endfunction()
+
+function(set_common_target_properties TARGET)
+
+    # Check if a second argument (MIN_CXX_STANDARD) is provided
+    if(ARGC GREATER 1)
+        set(MIN_CXX_STANDARD ${ARGV1})
+    endif()
+
+    get_target_property(TARGET_TYPE ${TARGET} TYPE)
+
+    set(CXX_STANDARD 17)
+    if(MIN_CXX_STANDARD)
+        if(MIN_CXX_STANDARD GREATER ${CXX_STANDARD})
+            set(CXX_STANDARD ${MIN_CXX_STANDARD})
+        endif()
+    endif()
+
+    set_target_properties(${TARGET} PROPERTIES
+        # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
+        # error: invalid argument '-std=c++17' not allowed with 'C/ObjC'
+        CXX_STANDARD ${CXX_STANDARD}
+        CXX_STANDARD_REQUIRED ON
+    )
+
+    if(MSVC)
+        # For msvc, enable link-time code generation for release builds (I was not able to
+        # find any way to set these settings through interface library BuildSettings)
+        if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
+            foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+                set_target_properties(${TARGET} PROPERTIES
+                    STATIC_LIBRARY_FLAGS_${REL_CONFIG} /LTCG
+                )
+            endforeach()
+        else()
+            foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+                set_target_properties(${TARGET} PROPERTIES
+                    LINK_FLAGS_${REL_CONFIG} "/LTCG /OPT:REF /INCREMENTAL:NO"
+                )
+            endforeach()
+        endif()
+    else()
+        set_target_properties(${TARGET} PROPERTIES
+            CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            VISIBILITY_INLINES_HIDDEN TRUE
+
+            # Without -fPIC option GCC fails to link static libraries into dynamic library:
+            #  -fPIC
+            #      If supported for the target machine, emit position-independent code, suitable for
+            #      dynamic linking and avoiding any limit on the size of the global offset table.
+            POSITION_INDEPENDENT_CODE ON
+
+            C_STANDARD 11 # MSVC requires legacy C standard
+        )
+
+        if(NOT MINGW_BUILD)
+            # Do not disable extensions when building with MinGW!
+            set_target_properties(${TARGET} PROPERTIES
+                CXX_EXTENSIONS OFF
+            )
+        endif()
+
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND TARGET_TYPE STREQUAL SHARED_LIBRARY)
+            target_link_options(${TARGET}
+            PRIVATE
+                # Disallow missing direct and indirect dependencies to ensure that .so is self-contained
+                LINKER:--no-undefined
+                LINKER:--no-allow-shlib-undefined
+            )
+        endif()
+    endif() # if(MSVC)
+endfunction()
