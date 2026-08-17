@@ -261,6 +261,7 @@ option(HIKALI_BUILD_WIN32_GUI_AS_CONSOLE "Build Windows GUI applications using t
 
 add_subdirectory(BuildTools)
 add_subdirectory(Primitives)
+add_subdirectory(Platforms)
 add_subdirectory(Common)
 add_subdirectory(Main)
 

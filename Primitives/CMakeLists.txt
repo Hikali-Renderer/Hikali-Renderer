@@ -7,7 +7,8 @@ set(SOURCE
 
 set(INTERFACE 
     interface/DebugOutput.h
-    interface/FormatString.hpp)
+    interface/FormatString.hpp
+    interface/Error.hpp)
 
 add_library(Hikali-Primitives STATIC ${INTERFACE} ${SOURCE})
 set_common_target_properties(Hikali-Primitives)
