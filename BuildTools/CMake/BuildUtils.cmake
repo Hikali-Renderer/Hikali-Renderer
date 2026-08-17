@@ -147,3 +147,29 @@ function(set_common_target_properties TARGET)
         endif()
     endif() # if(MSVC)
 endfunction()
+
+# Performs installation steps for the core library
+function(install_core_lib _TARGET)
+    get_target_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
+
+    get_target_property(TARGET_TYPE ${_TARGET} TYPE)
+    if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
+        list(APPEND HIKALI_RENDERER_INSTALL_LIBS_LIST ${_TARGET})
+        set(HIKALI_RENDERER_INSTALL_LIBS_LIST ${HIKALI_RENDERER_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
+    elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
+        install(TARGETS                 ${_TARGET}
+                ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>"
+                LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>"
+                RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>"
+        )
+        if (HIKALI_INSTALL_PDB)
+            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "${CMAKE_INSTALL_BINDIR}/${HIKALI_RENDERER_DIR}/$<CONFIG>" OPTIONAL)
+        endif()
+    endif()
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
+        install(DIRECTORY    interface
+                DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_RELATIVE_PATH}/"
+        )
+    endif()
+endfunction()

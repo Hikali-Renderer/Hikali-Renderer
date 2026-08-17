@@ -260,6 +260,8 @@ endif()
 option(HIKALI_BUILD_WIN32_GUI_AS_CONSOLE "Build Windows GUI applications using the console subsystem" OFF)
 
 add_subdirectory(BuildTools)
+add_subdirectory(Primitives)
+add_subdirectory(Common)
 add_subdirectory(Main)
 
 include(BuildTools/CMake/BuildUtils.cmake)

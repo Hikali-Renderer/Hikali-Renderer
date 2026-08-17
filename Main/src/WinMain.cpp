@@ -477,11 +477,13 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In
     LogLine(Format(L"渲染器窗口已创建：客户区 %ld x %ld（DPI %u），进入消息循环。",
                    client.right - client.left, client.bottom - client.top,
                    GetDpiForWindow(hwnd)));
+    /*
     if (!g_mainApp->OnWindowCreated(hwnd, config.windowWidth, config.windowHeight))
     {
         ReportFatal(Format(L"渲染器初始化失败（错误码 %lu）。", GetLastError()));
         return -1;
     }
+    */
 
     // TODO: 在此用 config.backend 创建设备与交换链（vsync / debugLayers 在设备初始化时生效），
     //       并把 GetMessage 换成 PeekMessage 驱动的渲染循环
