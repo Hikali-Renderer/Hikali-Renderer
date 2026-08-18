@@ -6,12 +6,16 @@ set(SOURCE
     src/BasicPlatformDebug.cpp)
 
 set(INTERFACE 
-    interface/BasicPlatformDebug.hpp)
+    interface/BasicPlatformDebug.hpp
+    interface/DebugUtilities.hpp)
 
 add_library(Hikali-BasicPlatform STATIC ${SOURCE} ${INTERFACE})
 set_common_target_properties(Hikali-BasicPlatform)
 
-target_include_directories(Hikali-BasicPlatform PUBLIC interface)
+target_include_directories(Hikali-BasicPlatform 
+PUBLIC 
+    interface
+    ../../Primitives/interface)
 target_link_libraries(Hikali-BasicPlatform 
 PRIVATE 
     BuildSettings

@@ -1,9 +1,9 @@
-/*  参考DiligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
+/*  鍙傝�僁iligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
 #pragma once
 
 namespace Hikali
 {
-    /// 描述debug信息严重程度
+    /// 鎻忚堪debug淇℃伅涓ラ噸绋嬪害
     enum DEBUG_MESSAGE_SEVERITY
     {
         /// Information 
@@ -12,10 +12,10 @@ namespace Hikali
         /// Warning
         DEBUG_MESSAGE_SEVERITY_WARNING,
 
-        /// Error - 可能修复
+        /// Error - 鍙兘淇
         DEBUG_MESSAGE_SEVERITY_ERROR,
 
-        /// Fatal error - 不可修复
+        /// Fatal error - 涓嶅彲淇
         DEBUG_MESSAGE_SEVERITY_FATAL_ERROR
     };
 

@@ -1,4 +1,4 @@
-/*  参考DiligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
+/*  鍙傝�僁iligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
 #pragma once
 
 #include <stdexcept>
@@ -45,7 +45,7 @@ namespace Hikali
     }
 }
 
-// do while用于正确处理宏后跟分号的情形
+// do while鐢ㄤ簬姝ｇ‘澶勭悊瀹忓悗璺熷垎鍙风殑鎯呭舰
 #define LOG_ERROR(...)                                                                                 \
     do                                                                                                 \
     {                                                                                                  \

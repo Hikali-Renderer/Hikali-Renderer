@@ -1,4 +1,4 @@
-/*  ²Î¿¼DiligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
+/*  å‚è€ƒDiligentEngine:https://github.com/DiligentGraphics/DiligentEngine  */
 #pragma once
 
 #include <sstream>
